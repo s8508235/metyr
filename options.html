@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>AI Translator Settings</title>
+    <style>
+        body {
+            padding: 20px;
+            font-family: sans-serif;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            box-sizing: border-box;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px;
+            cursor: pointer;
+            background: #007AFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>API Configuration</h2>
+
+    <label>Server Host (e.g., https://api.myserver.com)</label>
+    <input type="text" id="host" placeholder="https://api.example.com">
+
+    <label>Transcribe Path</label>
+    <input type="text" id="transcribePath" placeholder="/translate">
+
+    <label>Health Path</label>
+    <input type="text" id="healthPath" placeholder="/health">
+
+    <button id="save">Save Settings</button>
+
+    <script src="options.js"></script>
+</body>
+
+</html>
