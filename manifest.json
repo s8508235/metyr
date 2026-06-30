@@ -1,12 +1,24 @@
 {
   "manifest_version": 3,
-  "name": "Gardenia",
+  "name": "Metyr",
   "version": "1.0",
   "description": "Send string to local inference server to transcribe string",
-  "permissions": ["contextMenus", "activeTab"],
-  "host_permissions": ["http://127.0.0.1/*"],
+  "permissions": [
+    "contextMenus",
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*"
+  ],
+  "options_page": "options.html",
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "scripts": [
+      "background.js"
+    ],
+    "type": "module"
   },
   "commands": {
     "translate-selection": {
@@ -19,8 +31,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ]
     }
   ]
 }

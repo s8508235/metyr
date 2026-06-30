@@ -1,23 +1,29 @@
-const SERVER = "http://127.0.0.1:8087/v1/chat/completions";
-const HEALTH_ENDPOINT = "http://127.0.0.1.8087/health"; 
-
 const INSTRUCTION = "You are a professional translator. Translate the English text below into Traditional Chinese as used in Taiwan (zh-TW / 臺灣正體). Use Taiwanese vocabulary and phrasing (e.g. 軟體, 程式, 網路, 影片), not Mainland terms. Preserve meaning, tone, and any formatting. Output ONLY the translation - no pinyin, no notes, no original text, no surrounding quotation marks.\n\nEnglish:\n";
 
-async function isServerHealthy() {
+// Helper to get current config
+async function getConfig() {
+  const defaults = {
+    host: 'http://localhost:8000',
+    transcribePath: '/v1/chat/completions',
+    healthPath: '/health'
+  };
+  return new Promise((resolve) => {
+    chrome.storage.local.get(defaults, (settings) => {
+      resolve(settings);
+    });
+  });
+}
+
+async function isServerHealthy(config) {
   try {
-    // Set a short timeout (e.g., 3 seconds) for the health check
+    const url = config.host + config.healthPath;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-    const response = await fetch(HEALTH_ENDPOINT, {
-      method: 'GET', // or 'HEAD'
-      signal: controller.signal
-    });
-
+    const response = await fetch(url, { signal: controller.signal });
     clearTimeout(timeoutId);
     return response.ok;
-  } catch (error) {
-    console.error("Health check failed:", error);
+  } catch (e) {
     return false;
   }
 }
@@ -57,7 +63,24 @@ chrome.runtime.onMessage.addListener((request, sender) => {
 });
 
 async function performTranslation(text, tabId) {
-  chrome.tabs.sendMessage(tabId, { action: "showLoading" });
+
+  const config = await getConfig();
+  // 1. Show "Checking connection..." or "Translating..."
+  chrome.tabs.sendMessage(tabId, { action: "showLoading", text: "Checking server..." });
+
+  // 2. Perform Health Check
+  const healthy = await isServerHealthy(config);
+
+  if (!healthy) {
+    chrome.tabs.sendMessage(tabId, {
+      action: "showError",
+      text: "❌ Server is currently offline. Please try again later."
+    });
+    return; // Ignore the request
+  }
+
+  // 3. Proceed with Translation if healthy
+  chrome.tabs.sendMessage(tabId, { action: "showLoading", text: "Translating..." });
 
   const payload = {
     messages: [{ role: "user", content: INSTRUCTION + text }],
@@ -69,8 +92,9 @@ async function performTranslation(text, tabId) {
 
   console.log("Sending payload:", payload);
 
+  const url = config.host + config.transcribePath;
   try {
-    const response = await fetch(SERVER, {
+    const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)

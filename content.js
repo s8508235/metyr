@@ -6,9 +6,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       chrome.runtime.sendMessage({ action: "startTranslation", text: selection });
     }
   } else if (request.action === "showLoading") {
-    showOverlay("Translating...");
+    showOverlay(request.text || "Translating...");
   } else if (request.action === "showResult") {
     showOverlay(request.text, true);
+  } else if (request.action === "showError") {
+    showOverlay(request.text, true, true); // Added isError flag
   }
 });
 
@@ -16,14 +18,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d") {
     if (window.getSelection().toString().trim()) {
-      e.preventDefault(); 
+      e.preventDefault();
     }
   }
 });
 
-function showOverlay(text, isResult = false) {
+function showOverlay(text, isResult = false, isError = false) {
   let div = document.getElementById("ai-translation-overlay");
-  
+
   if (!div) {
     div = document.createElement("div");
     div.id = "ai-translation-overlay";
@@ -42,26 +44,24 @@ function showOverlay(text, isResult = false) {
       fontSize: "14px",
       lineHeight: "1.6",
       borderLeft: "4px solid #007AFF",
-      cursor: "grab", // Indicate it can be moved
-      userSelect: "none" // Prevent text selection while dragging
+      cursor: "grab",
+      userSelect: "none"
     });
-    
     document.body.appendChild(div);
     makeElementDraggable(div);
   }
 
+  // Visual feedback for errors
+  div.style.borderLeft = isError ? "4px solid #FF3B30" : "4px solid #007AFF";
   div.innerText = text;
 
-  if (isResult) {
-    // We add a small "x" or instruction because clicking now might conflict with dragging
+  if (isResult || isError) {
     const closeHint = document.createElement('div');
     closeHint.innerText = "(Double-click to close)";
     closeHint.style.fontSize = "10px";
     closeHint.style.marginTop = "8px";
     closeHint.style.opacity = "0.6";
     div.appendChild(closeHint);
-    
-    // Use double click to remove so single clicks can be used for dragging
     div.ondblclick = () => div.remove();
   }
 }
@@ -76,7 +76,7 @@ function makeElementDraggable(el) {
     // Get mouse position at startup
     pos3 = e.clientX;
     pos4 = e.clientY;
-    
+
     // Change cursor
     el.style.cursor = "grabbing";
 
