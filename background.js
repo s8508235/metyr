@@ -83,7 +83,10 @@ async function performTranslation(text, tabId) {
   chrome.tabs.sendMessage(tabId, { action: "showLoading", text: "Translating..." });
 
   const payload = {
-    messages: [{ role: "user", content: INSTRUCTION + text }],
+    messages: [
+      { role: "system", content: INSTRUCTION },
+      { role: "user", content: text }
+    ],
     temperature: 0,
     top_p: 1.0,
     stream: false,

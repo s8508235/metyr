@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- this is unrelated to the extension. it's a single html page -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kagi Translate Mock</title>
+    <style>
+        :root {
+            --kagi-yellow: #ffcc00;
+            --bg-color: #ffffff;
+            --text-color: #000000;
+            --border-color: #e5e5e5;
+            --secondary-bg: #f9f9f9;
+            --accent-hover: #ffdb4d;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #111111;
+            --text-color: #f0f0f0;
+            --border-color: #333333;
+            --secondary-bg: #1a1a1a;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background 0.3s;
+            min-height: 100vh;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.8rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-color);
+        }
+
+        .logo {
+            font-weight: bold;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .logo span {
+            color: var(--kagi-yellow);
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        /* THE EXPANDABLE CONTAINER */
+        .translate-container {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            background-color: var(--border-color);
+            /* Gap color */
+
+            /* Logic: Start at 300, grow to 60vh, then scroll */
+            min-height: 300px;
+            max-height: 60vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .translate-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px;
+            flex: 1;
+            overflow-y: auto;
+            /* Scroll inside here when 60vh is hit */
+            background-color: var(--border-color);
+        }
+
+        .box {
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+        }
+
+        .box-header {
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: #888;
+            letter-spacing: 0.08rem;
+            text-transform: uppercase;
+            background-color: var(--secondary-bg);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        /* Elements grow with content */
+        textarea,
+        .output-text {
+            width: 100%;
+            padding: 1.5rem;
+            font-size: 1.2rem;
+            line-height: 1.5;
+            border: none;
+            outline: none;
+            background: transparent;
+            color: var(--text-color);
+            height: auto;
+            min-height: 200px;
+        }
+
+        textarea {
+            resize: none;
+            overflow: hidden;
+        }
+
+        /* JS handles height */
+        .output-text {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .btn {
+            background-color: var(--kagi-yellow);
+            border: none;
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+
+        .btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            opacity: 0.7;
+            transform: none;
+        }
+
+        #settings-page {
+            display: none;
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: var(--secondary-bg);
+        }
+
+        .setting-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .setting-group label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .setting-group input,
+        .setting-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .loading-spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #888;
+            border-top: 2px solid var(--kagi-yellow);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .translate-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .translate-container {
+                max-height: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="logo" onclick="showPage('translate')">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--kagi-yellow)">
+                <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" />
+            </svg>
+            KAGI <span>TRANSLATE</span>
+        </div>
+        <div class="nav-actions">
+            <button class="btn-outline btn" onclick="toggleTheme()">🌓</button>
+            <button class="btn-outline btn" onclick="showPage('settings')">Settings</button>
+        </div>
+    </header>
+
+    <!-- Translate View -->
+    <main id="translate-page">
+        <div class="translate-container">
+            <div class="translate-grid">
+                <div class="box">
+                    <div class="box-header">Source Text</div>
+                    <textarea id="sourceText" placeholder="Type here or paste to translate..."
+                        oninput="autoResize(this)"></textarea>
+                </div>
+                <div class="box">
+                    <div class="box-header" style="display:flex; justify-content: space-between; align-items: center;">
+                        <span>Traditional Chinese (zh_TW)</span>
+                        <div id="loader" class="loading-spinner"></div>
+                    </div>
+                    <div id="targetText" class="output-text"></div>
+                </div>
+            </div>
+        </div>
+        <div style="margin-top: 1.5rem; text-align: right;">
+            <button class="btn" id="translateBtn" onclick="performTranslation()">Translate</button>
+        </div>
+    </main>
+
+    <!-- Settings View -->
+    <div id="settings-page">
+        <h2>Configuration</h2>
+        <div class="setting-group">
+            <label>API Base URL</label>
+            <input type="text" id="apiUrl" placeholder="https://api.openai.com/v1">
+        </div>
+        <div class="setting-group">
+            <label>API Key</label>
+            <input type="password" id="apiKey" placeholder="sk-...">
+        </div>
+        <div class="setting-group">
+            <label>Model</label>
+            <input type="text" id="modelName" placeholder="gpt-4o-mini">
+        </div>
+        <div class="setting-group">
+            <label>System Instructions</label>
+            <textarea id="instructions" style="height: 120px;"></textarea>
+        </div>
+        <button class="btn" style="width: 100%;" onclick="saveSettings()">Save Configuration</button>
+    </div>
+
+    <script>
+        const savedTheme = localStorage.getItem('kagi_theme') || 'light';
+        document.body.setAttribute('data-theme', savedTheme);
+        const defaultConfig = {
+            apiUrl: 'https://api.openai.com/v1',
+            apiKey: '',
+            modelName: 'gpt-4o-mini',
+            instructions: 'You are a professional translator. Always translate the input text into Traditional Chinese (zh_TW). Even if the source is Chinese, rewrite it to be standard Traditional Chinese used in Taiwan. Maintain the original formatting and style.'
+        };
+
+        let config = JSON.parse(localStorage.getItem('kagi_mock_config')) || defaultConfig;
+
+        // Init fields
+        document.getElementById('apiUrl').value = config.apiUrl;
+        document.getElementById('apiKey').value = config.apiKey;
+        document.getElementById('modelName').value = config.modelName;
+        document.getElementById('instructions').value = config.instructions;
+
+        const sourceInput = document.getElementById('sourceText');
+        const targetOutput = document.getElementById('targetText');
+
+        // Logic 1: Auto-resize textarea as you type
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = el.scrollHeight + 'px';
+        }
+
+        // Logic 2: Auto-translate on Paste
+        sourceInput.addEventListener('paste', (e) => {
+            // Allow time for content to land in textarea
+            setTimeout(() => {
+                autoResize(sourceInput);
+                performTranslation();
+            }, 100);
+        });
+
+        // Logic 3: Shift+Enter or Button to translate manually
+        sourceInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                performTranslation();
+            }
+        });
+
+        function showPage(page) {
+            document.getElementById('translate-page').style.display = page === 'translate' ? 'block' : 'none';
+            document.getElementById('settings-page').style.display = page === 'settings' ? 'block' : 'none';
+        }
+
+        function saveSettings() {
+            config = {
+                apiUrl: document.getElementById('apiUrl').value.trim(),
+                apiKey: document.getElementById('apiKey').value.trim(),
+                modelName: document.getElementById('modelName').value.trim(),
+                instructions: document.getElementById('instructions').value.trim()
+            };
+            localStorage.setItem('kagi_mock_config', JSON.stringify(config));
+            showPage('translate');
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const current = body.getAttribute('data-theme');
+            const newTheme = current === 'dark' ? 'light' : 'dark';
+            body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('kagi_theme', newTheme); // Save preference
+        }
+
+        async function performTranslation() {
+            const source = sourceInput.value.trim();
+            const loader = document.getElementById('loader');
+            const btn = document.getElementById('translateBtn'); // Select the button
+
+
+            if (!source) return;
+            if (!config.apiKey) {
+                alert('Please enter an API Key in Settings.');
+                showPage('settings');
+                return;
+            }
+
+
+            // --- START LOADING STATE ---
+            btn.disabled = true;
+            btn.innerText = "Translating...";
+            // ---------------------------
+
+            loader.style.display = 'block';
+            targetOutput.style.opacity = '0.3';
+
+            try {
+                const response = await fetch(`${config.apiUrl}/v1/chat/completions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${config.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: config.modelName,
+                        messages: [
+                            { role: "system", content: config.instructions },
+                            { role: "user", content: source }
+                        ],
+                        temperature: 0.2
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+
+                targetOutput.innerText = data.choices[0].message.content.trim();
+            } catch (error) {
+                targetOutput.innerText = "Error: " + error.message;
+            } finally {
+                loader.style.display = 'none';
+                targetOutput.style.opacity = '1';
+                btn.disabled = false;
+                btn.innerText = "Translate";
+            }
+        }
+    </script>
+</body>
+
+</html>
