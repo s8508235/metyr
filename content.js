@@ -92,12 +92,29 @@ function makeElementDraggable(el) {
     pos3 = e.clientX;
     pos4 = e.clientY;
 
-    // Switch from bottom/right to top/left to allow free movement
-    const rect = el.getBoundingClientRect();
+    // Calculate proposed positions
+    let newTop = el.offsetTop - pos2;
+    let newLeft = el.offsetLeft - pos1;
+
+    // Boundary Constraints
+    const minTop = 0;
+    const minLeft = 0;
+    const maxTop = window.innerHeight - el.offsetHeight;
+    const maxLeft = window.innerWidth - el.offsetWidth;
+
+    // Restrict Top/Bottom
+    if (newTop < minTop) newTop = minTop;
+    else if (newTop > maxTop) newTop = maxTop;
+
+    // Restrict Left/Right
+    if (newLeft < minLeft) newLeft = minLeft;
+    else if (newLeft > maxLeft) newLeft = maxLeft;
+
+    // Apply restricted coordinates
     el.style.bottom = "auto";
     el.style.right = "auto";
-    el.style.top = (rect.top - pos2) + "px";
-    el.style.left = (rect.left - pos1) + "px";
+    el.style.top = newTop + "px";
+    el.style.left = newLeft + "px";
   }
 
   function closeDragElement() {

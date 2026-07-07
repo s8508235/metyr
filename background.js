@@ -63,7 +63,13 @@ chrome.runtime.onMessage.addListener((request, sender) => {
 });
 
 async function performTranslation(text, tabId) {
-
+  if (!tabId || tabId < 0) {
+    chrome.tabs.sendMessage(tabId, {
+      action: "showError",
+      text: "❌ Cannot find the tab."
+    });
+    return;
+  }
   const config = await getConfig();
   // 1. Show "Checking connection..." or "Translating..."
   chrome.tabs.sendMessage(tabId, { action: "showLoading", text: "Checking server..." });
